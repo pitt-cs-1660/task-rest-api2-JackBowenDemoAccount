@@ -44,6 +44,7 @@ async def create_task(task_data: TaskCreate):
     )
     conn.commit()
     conn.close()
+    return TaskRead(id=task_id, title=task_data.title, description=task_data.description, completed=task_data.completed)
   #  raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented")
 
 
@@ -64,7 +65,7 @@ async def get_tasks():
     cursor.execute("SELECT * FROM tasks")
     tasks = cursor.fetchall()
     conn.close()
-    return tasks
+    return [TaskRead(id=row[0], title=row[1], description=row[2], completed=row[3]) for row in tasks]
     #raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented")
 
 
@@ -86,8 +87,10 @@ async def update_task(task_id: int, task_data: TaskCreate):
     cursor.execute("UPDATE tasks SET title = ?, description = ?, completed = ?, WHERE id = ?", (task_data.title, task_data.description, task_data.completed, task_id),)
     conn.commit()
     conn.close()
-    return task_data.title, task_data.description, task_data.completed, task_id
-    #raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented")
+    if cursor.rowcount == 0:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+
+    return TaskRead(id=task_id, title=task_data.title, description=task_data.description)
 
 
 # DELETE ROUTE task_id is in the URL
@@ -107,5 +110,7 @@ async def delete_task(task_id: int):
     cursor.execute("DELETE task WHERE id = ?", task_id)
     conn.commit()
     conn.close()
-    return "Succesfully deleted the specified task"
-    #raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented")
+    if cursor.rowcount == 0:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+
+    return {"message": "Task deleted successfully"}
