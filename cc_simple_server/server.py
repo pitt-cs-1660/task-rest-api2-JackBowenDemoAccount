@@ -40,9 +40,11 @@ async def create_task(task_data: TaskCreate):
     cursor = conn.cursor()
     cursor.execute(
         "INSERT INTO tasks (title, description, completed) VALUES (?, ?, ?)",
-        (task_data.title, task_data.description, task_data.completed),
+        (task_data.title, task_data.description, task_data.completed)
     )
+   
     conn.commit()
+    task_id = cursor.lastrowid
     conn.close()
     return TaskRead(id=task_id, title=task_data.title, description=task_data.description, completed=task_data.completed)
   #  raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented")
@@ -84,13 +86,17 @@ async def update_task(task_id: int, task_data: TaskCreate):
     """
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("UPDATE tasks SET title = ?, description = ?, completed = ?, WHERE id = ?", (task_data.title, task_data.description, task_data.completed, task_id),)
+    cursor.execute(
+    "UPDATE tasks SET title = ?, description = ?, completed = ? WHERE id = ?",
+    (task_data.title, task_data.description, task_data.completed, task_id,)
+    )
     conn.commit()
-    conn.close()
+    
     if cursor.rowcount == 0:
+        conn.close()
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
-
-    return TaskRead(id=task_id, title=task_data.title, description=task_data.description)
+    conn.close()
+    return TaskRead(id=task_id, title=task_data.title, description=task_data.description, completed=task_data.completed)
 
 
 # DELETE ROUTE task_id is in the URL
@@ -107,10 +113,11 @@ async def delete_task(task_id: int):
     """
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("DELETE task WHERE id = ?", task_id)
+    cursor.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
     conn.commit()
-    conn.close()
+    
     if cursor.rowcount == 0:
+        conn.close()
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
-
+    conn.close()
     return {"message": "Task deleted successfully"}
